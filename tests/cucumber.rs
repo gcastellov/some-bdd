@@ -1,12 +1,10 @@
-use cucumber_rust::{Context, Cucumber, World, async_trait, criteria, t};
+use cucumber_rust::{Context, Cucumber, World, async_trait, t};
 use hyper::{Response, Body};
 use serde_json::Value;
 use somebdd::state::{EventHandlerState, RunStats, RunEventHandler, print_test_results, write_result_file};
 use somebdd::api::{ApiContext};
-use futures::FutureExt;
-use regex::Regex;
-use std::env;
 use std::{convert::Infallible};
+use std::env;
 
 pub struct MyWorld {
     base_url: Option<String>,
@@ -112,14 +110,14 @@ mod test_steps {
             world
         }));
 
-        builder.then("response contains error empty", |world: crate::MyWorld, _ctx| {            
+        builder.then("response contains error list as empty", |world: crate::MyWorld, _ctx| {            
             let content = world.last_content_response.clone().unwrap();
             let errors= content["error"].as_array().expect("Impossible to get error property as array");
             asserting(&"error property is empty").that(&errors.len()).is_equal_to(0) ;
             world
         });
 
-        builder.then("order list is empty", |world: crate::MyWorld, _ctx| {            
+        builder.then("response contains order list as empty", |world: crate::MyWorld, _ctx| {            
             let content = world.last_content_response.clone().unwrap();
             let result = content["result"].as_object().unwrap();
             let open_orders = result.get("open").unwrap().as_object().unwrap();             
@@ -211,24 +209,8 @@ async fn main() {
         .context(Context::new().add(ApiContext::new(api_key, api_host, secret_key, otp)))
         .features(&["./features"])
         .steps(test_steps::steps())
-        .after(criteria::scenario(Regex::new(".*").unwrap()), |context| {
-            let scenario_name = context.scenario.unwrap().name.clone();
-            async move {
-                println!("Scenario '{}' has finished!", scenario_name);
-                ()
-            }
-            .boxed()
-        })
-        .after(criteria::feature(Regex::new(".*").unwrap()), |context|{
-            let feature_name = context.feature.name.clone();
-            async move {
-                println!("Feature '{}' has finished!", feature_name);
-                ()
-            }
-            .boxed()
-        })
         .enable_capture(true)
-    };    
+    };
     
     let params: Vec<String> = env::args().skip(1).collect();
     let host = match params.get(0) {
